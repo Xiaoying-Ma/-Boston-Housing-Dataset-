@@ -1,0 +1,881 @@
+---
+title: "Factors Influencing Housing Values in Boston"
+subtitle: "A Exploratory and Regression Analysis"
+author: |
+  Xiaoying Ma  
+  
+date: "06/09/2026"
+output:
+  html_document:
+    theme: yeti
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: yes
+    code_folding: hide
+    code_download: yes
+    smooth_scroll: yes
+    highlight: tango
+    #css: styles.css
+  pdf_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    fig_width: 8
+    fig_height: 6
+    latex_engine: xelatex
+  word_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+abstract: |
+  This report analyzes the factors that influence housing values in the Boston area. The main response variable is **MEDV**, the median value of owner-occupied homes in thousands of dollars. The analysis uses data inspection, distributional exploration, location-related visualization, feature engineering, and regression modeling to study how neighborhood, environmental, accessibility, and river-adjacent characteristics are associated with housing value.
+
+  
+---
+
+
+```{css echo = FALSE}
+/* ============ CSS Styling for Lecture Notes ============ */
+
+body {
+  font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.7;
+  font-size: 1.4em;
+  color: #2d1b29;
+  
+  background-color: #fdfafd;
+}
+
+#TOC::before {
+  content: "Table of Contents";
+  font-weight: bold;
+  font-size: 1.4em;
+  display: block;
+  color: navy;
+  margin-bottom: 10px;
+}
+
+
+div#TOC li {     /* table of content  */
+    list-style:upper-roman;
+    background-image:none;
+    background-repeat:none;
+    background-position:0;
+    /*font-weight: bold; */
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: #6E3061;
+}
+
+.title {
+  font-size: 2.3rem;
+  color: #6E3061;
+  text-align: left;
+}
+
+.subtitle {
+  font-size: 2.1rem;
+  color: #6E3061;
+  text-align: left;
+  font-weight: 800;
+}
+
+.author { /* Header 4 - and the author and data headers use this too  */
+  font-size: 16px;
+  /*font-family: "Times New Roman", Times, serif;*/
+  color: #6E3061;
+  text-align: left;
+  font-weight: 400;
+}
+
+.date { /* Header 4 - and the author and data headers use this too  */
+  font-size: 14px;
+  /*font-family: "Times New Roman", Times, serif;*/
+  color: #6E3061;
+  text-align: left;
+  font-weight: 400;
+}
+
+
+h1 {
+  color: #6E3061;
+  border-bottom: 3px solid #6E3061;
+  padding-bottom: 8px;
+  margin-top: 40px;
+  font-weight: bold;
+  font-size: 2.2rem;
+}
+
+h2 {
+  color: #6E3061;
+  border-left: 5px solid #6E3061;
+  padding-left: 12px;
+  margin-top: 30px;
+  font-weight: bold;
+  font-size: 1.8rem;
+}
+
+h3 {
+  color: #8b4a7d;
+  margin-top: 24px;
+  font-weight: bold;
+  font-size: 1.8m;
+}
+
+h4 {
+  color: #a05f92;
+  margin-top: 18px;
+  font-weight: bold;
+  font-size: 1.4rem;
+}
+
+code {
+  background-color: #f4edf3;
+  color: #4a2040;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 0.9em;
+  border: 1px solid #d4c0d1;
+}
+
+pre {
+  background-color: #f9f5f9;
+  border: 1px solid #d4c0d1;
+  border-left: 4px solid #6E3061;
+  border-radius: 6px;
+  padding: 14px;
+}
+
+pre code {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+}
+
+blockquote {
+  background-color: #f4edf3;
+  border-left: 4px solid #6E3061;
+  padding: 12px 18px;
+  margin: 16px 0;
+  border-radius: 0 6px 6px 0;
+  color: #4a2040;
+}
+
+.note-box {
+  background-color: #f0e6ee;
+  border: 1px solid #c49bb8;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 18px 0;
+}
+
+.note-box strong {
+  color: #6E3061;
+}
+
+.tip-box {
+  background-color: #e8f5e9;
+  border: 1px solid #81c784;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 18px 0;
+}
+
+.tip-box strong {
+  color: #2e7d32;
+}
+
+.warning-box {
+  background-color: #fff3e0;
+  border: 1px solid #ffb74d;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 18px 0;
+}
+
+.warning-box strong {
+  color: #e65100;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+}
+
+table th {
+  background-color: #6E3061;
+  color: white;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #d4c0d1;
+}
+
+table tr:nth-child(even) td {
+  background-color: #faf5f9;
+}
+
+table tr:hover td {
+  background-color: #f0e6ee;
+}
+
+.toc {
+  background-color: #faf5f9;
+  border: 1px solid #d4c0d1;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.figure {
+  border: 1px solid #e0d1db;
+  border-radius: 8px;
+  padding: 8px;
+  margin: 16px 0;
+  box-shadow: 0 2px 8px rgba(110, 48, 97, 0.08);
+}
+```
+
+
+```{r setup, include=FALSE}
+# =============================
+#  SETUP AND CONFIGURATION
+# =============================
+
+# ---- Knitr Global Options ----
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  fig.width = 10,
+  fig.height = 7,
+  dpi = 150,
+  cache = FALSE,
+  comment = NA,
+  out.width = "100%",
+  fig.pos = "H"
+)
+
+# ---- R Global Options ----
+options(
+  scipen = 999,
+  digits = 4,
+  width = 100,
+  dplyr.summarise.inform = FALSE,
+  stringsAsFactors = FALSE,
+  max.print = 100
+)
+```
+
+
+
+```{r echo = FALSE, message=FALSE}
+# Set CRAN mirror
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+# Quick install and load for R Markdown
+packages <- c("tidyverse", "plotly", "leaflet", "DT", "corrplot",
+              "GGally", "MASS", "patchwork", "scales",
+              "viridis", "RColorBrewer", "ggridges", "gghighlight",
+              "ggrepel", "cowplot", "sf", "ggspatial", "knitr",
+              "kableExtra", "gridExtra", "leaps", "ggfortify", "pander")
+
+# Install missing packages
+missing_pkgs <- packages[!(packages %in% rownames(installed.packages()))]
+
+if(length(missing_pkgs) > 0){
+  install.packages(missing_pkgs, repos = "https://cloud.r-project.org")
+}
+
+# Load all packages
+invisible(lapply(packages, library, character.only = TRUE))
+
+
+# ---- Global Theme Configuration ----
+my.theme = function(){
+  theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold", size = 14, color = "#2c3e50", hjust = 0.5),
+      plot.subtitle = element_text(color = "#7f8c8d", size = 11),
+      plot.caption = element_text(color = "#95a5a6", size = 8, face = "italic"),
+      legend.position = "bottom",
+      legend.title = element_text(face = "bold", size = 10),
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(color = "#ecf0f1", linewidth = 0.3),
+      axis.title = element_text(size = 11, color = "#34495e"),
+      axis.text = element_text(size = 10, color = "#2c3e50"),
+      strip.text = element_text(face = "bold", size = 11),
+      strip.background = element_rect(fill = "#f8f9fa", color = NA)
+    )
+ }
+```
+
+# Introduction: 
+
+The **Boston Housing Dataset** contains housing and neighborhood information for census tracts in the Boston Standard Metropolitan Statistical Area. The data include median housing value, crime rate, environmental measures, accessibility measures, school-related variables, and neighborhood characteristics. The response variable selected for regression analysis is **MEDV**, the median value of owner-occupied homes in thousands of dollars.
+ 
+
+
+**Objectives**
+
+This project aims to achieve the following objectives:
+
+* Identify the key factors that significantly influence housing prices in Boston
+
+* Quantify the magnitude and direction of each predictor’s effect on median home value
+
+* Visualize spatial patterns and relationships among housing, environmental, and socioeconomic variables
+
+* Develop a predictive model for estimating Boston housing prices
+
+* Demonstrate the application of the Visualization Framework in housing market analysis
+
+
+# Data Acquisition and Processing
+
+This dataset contains housing and neighborhood information for census tracts in the Boston metropolitan area. It includes structural, environmental, accessibility, and socidoeconomic variables, while the response variable `medv` records the median value of owner-occupied homes in thousands of dollars.
+
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║              DATA ACQUISITION SUMMARY                        ║
+╠══════════════════════════════════════════════════════════════╣
+║  Dataset:    Boston Housing Dataset                          ║
+║  Source:     Kaggle                                          ║
+║  Period:     1978                                            ║
+║  Geography:  Boston Metropolitan Area                        ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+
+* **Variable Dictionary in the Boston Housing Dataset **
+
+| Variable Name |   Description |
+|:------------------|:----------------------------------------------------------|
+|  TOWN |  Town name . | 
+|  CRIM |  Per capita crime rate by town . | 
+|  TOWNNO |  Town identification number. | 
+|  TRACT |  Census tract identifier. | 
+|  CMEDV |  Capped median home value. |
+|  ZN|  Proportion of residential land zoned for lots over 25,000 sq.ft.| 
+|  INDUS|  Proportion of non-retail business acres per town.|  
+|  CHAS|   Charles River dummy variable (1 if tract bounds river; 0 otherwise). | 
+|  NOX|  Nitric oxides concentration (parts per 10 million). | 
+|  RM|  Average number of rooms per dwelling. | 
+|  AGE|  Proportion of owner-occupied units built prior to 1940. | 
+|  DIS|  Weighted distances to five Boston employment centres . | 
+|  RAD|   Index of accessibility to radial highways. | 
+|  TAX|   Full-value property-tax rate per $10,000 . |
+|  PTRATIO|   Pupil-teacher ratio by town . | 
+|  B|  1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town. | 
+|  LSTAT|  % lower status of the population. | 
+|  MEDV|  Median value of owner-occupied homes in $1000's. | 
+|  LON|  Longitude. | 
+|  LAT| Latitude. | 
+
+* **Initial Data Processing**
+
+The initial data processing includes checking for missing values and preparing variable types for later analysis. Since the Boston housing data mainly contain numeric variables, only basic cleaning and simple variable transformation are needed.
+
+```{r read-data}
+housing_clean <- read.csv("BostonHousing.csv")
+
+# Remove index variable created during export
+if ("Unnamed: 0" %in% names(housing_clean)) {
+  housing_clean <- housing_clean[, !(names(housing_clean) %in% "Unnamed: 0")]
+}
+
+dim(housing_clean)
+head(housing_clean)
+     
+```
+
+```{r cleaning}
+# ======================================= 
+#   DATA CLEANING AND TRANSFORMATION
+# ======================================= 
+
+housing_clean <-  housing_clean %>%
+  filter(!is.na(MEDV)) %>%
+  mutate(
+    CHAS = factor(CHAS, levels = c(0, 1), labels = c("No", "Yes"))
+  )
+```
+There are no missing values in this data set. For illustrative purposes, we still show a simple cleaning step by removing observations with missing components if any were present. The data do not show serious missing-value issues. Therefore, only basic cleaning and variable preparation are needed before visual exploration.
+
+# Visual Exploratory Data Analysis
+
+The above descriptive summary indicates that there are no missing values in the data set. In the subsequent sections, we inspect variables and provide recommendations on feature engineering.
+
+
+## Distributional Patterns of Features
+
+We examine the distributions of categorical and numerical variables to identify predictors that may require regrouping or transformation.
+
+* **Categorical Variables**
+
+There are two main categorical variables in the Boston housing dataset.  The variable `CHAS` indicates whether a tract bounds the Charles River (`1 = yes`, `0 = no`).
+
+```{r chas-barplot}
+
+library(ggplot2)
+
+chas_count <- as.data.frame(table(housing_clean$CHAS))
+colnames(chas_count) <- c("CHAS", "Count")
+chas_count$Percent <- round(chas_count$Count / sum(chas_count$Count) * 100, 1)
+chas_count$Label <- paste0(chas_count$Count, " (", chas_count$Percent, "%)")
+
+ggplot(chas_count, aes(x = CHAS, y = Count)) +
+  geom_col(fill = "steelblue", width = 0.6) +
+  geom_text(aes(label = Label), vjust = -0.4, size = 4) +
+  labs(
+    title = "Distribution of Charles River Indicator",
+    x = "Bounds Charles River",
+    y = "Frequency"
+  ) +
+  expand_limits(y = max(chas_count$Count) * 1.12) +
+  my.theme()
+```
+
+The above bar chart does not indicate a serious imbalance problem for this binary variable. The relationship between `CHAS` and median house value will be examined later.
+
+
+* **Numerical Variables**
+
+The Boston housing dataset contains many numerical variables. For concise exploratory analysis, we focus on several major predictors with clear practical interpretation: `RM`, `LSTAT`, `NOX`, `DIS`, and the response variable `MEDV`. These variables reflect housing size, socioeconomic status, air pollution, accessibility, and housing value, respectively.
+
+```{r pairwise-plot, fig.width=8, fig.height=8}
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...) {
+  usr <- par("usr")
+  on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- cor(x, y, use = "complete.obs")
+  txt <- format(c(r, 0.123456789), digits = digits)[1]
+  txt <- paste(prefix, txt, sep = "")
+  if (missing(cex.cor)) cex.cor <- 0.8 / strwidth(txt)
+  text(0.5, 0.5, txt, cex = cex.cor * 0.8, col = "steelblue")
+}
+
+panel.hist <- function(x, ...) {
+  usr <- par("usr")
+  on.exit(par(usr))
+  par(usr = c(usr[1:2], 0, 1.5))
+  h <- hist(x, plot = FALSE, breaks = 15)
+  breaks <- h$breaks
+  nB <- length(breaks)
+  y <- h$counts
+  y <- y / max(y)
+  rect(breaks[-nB], 0, breaks[-1], y, col = "steelblue", border = "darkblue")
+}
+
+panel.scatter <- function(x, y, ...) {
+  points(x, y, pch = 19, col = rgb(0.3, 0.5, 0.8, alpha = 0.5), cex = 0.8)
+  abline(lm(y ~ x), col = "darkred", lwd = 2)
+}
+
+pairs(
+  housing_clean[, c("RM", "LSTAT", "NOX", "DIS", "MEDV")],
+  lower.panel = panel.scatter,
+  upper.panel = panel.cor,
+  diag.panel = panel.hist,
+  main = "Pair-wise Relationships Among Selected Numerical Variables"
+)
+```
+
+The pair-wise plot suggests that `RM`, `LSTAT`, `NOX`, and `DIS` are all related to `MEDV`. In particular, `RM` appears positively associated with housing value, while `LSTAT` and `NOX` show negative associations. The relationship between `DIS` and `MEDV` is also visible, although it appears less linear.
+
+
+* **Extract Geo-spatial Information**
+
+The Boston housing dataset contains spatial coordinate variables, LON and LAT, which allow us to visually explore geographic patterns in the data. In addition, several neighborhood-related variables, such as DIS (weighted distance to employment centers), RAD (accessibility to radial highways), and CHAS (whether the tract bounds the Charles River), provide further location-related information. Together, these variables help reveal geographic heterogeneity in housing values.
+
+```{r}
+library(leaflet)
+library(dplyr)
+
+leaflet(housing_clean) %>%
+  addTiles() %>%
+  fitBounds(lng1 = -71.25, lat1 = 42.20, lng2 = -70.95, lat2 = 42.45) %>%
+  addCircleMarkers(
+    lng = ~LON,
+    lat = ~LAT,
+    radius = 3,
+    color = "purple",
+    fillOpacity = 0.5,
+    popup = ~paste(
+      "<b>🏠 Boston Housing Details</b><br>",
+      "━━━━━━━━━━━━━━━━━━━<br>",
+      "🏘️ Town:", TOWN, "<br>",
+      "🌊 Charles River:", CHAS, "<br>",
+      "🏚️ Housing Age:", round(AGE, 1), "<br>",
+      "🏢 Distance to Employment Centers:", round(DIS, 2), "<br>",
+      "🚗 Highway Accessibility (RAD):", RAD, "<br>",
+      "🌫️ NOX Concentration:", round(NOX, 3), "<br>",
+      "🏠 Average Rooms:", round(RM, 2), "<br>",
+      "💰 Median House Value:", MEDV, "<br>",
+      "📍 Coordinates:", round(LAT, 4), ", ", round(LON, 4)
+    )
+  )
+```
+
+The map suggests visible geographic heterogeneity in Boston housing values. This supports the inclusion of location-related features in the subsequent regression analysis.
+
+```{r}
+ggplot(housing_clean, aes(x = CHAS, y = MEDV, fill = CHAS)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(
+    title = "Median Housing Value by Charles River Indicator",
+    x = "Bounds Charles River",
+    y = "Median Housing Value (MEDV)"
+  ) +
+  guides(fill = "none") +
+  my.theme()
+```
+
+The boxplot shows that tracts bordering the Charles River may have a different distribution of housing values from those that do not. This suggests that location-related information in the Boston dataset captures meaningful neighborhood heterogeneity and should be considered in the subsequent modeling process.
+
+# Feature Engineering
+
+We construct several categorical variables to facilitate descriptive interpretation in the subsequent analysis. In particular, `NOX` and `DIS` are grouped into three ordered categories based on sample tertiles. We also create a simple spatial grouping variable using the coordinate information, which may help capture broad east-west and north-south neighborhood differences.
+
+```{r feature-engineering}
+housing_clean$NOX_cat <- cut(
+  housing_clean$NOX,
+  breaks = quantile(housing_clean$NOX, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+  include.lowest = TRUE,
+  labels = c("Low", "Medium", "High")
+)
+
+housing_clean$DIS_cat <- cut(
+  housing_clean$DIS,
+  breaks = quantile(housing_clean$DIS, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+  include.lowest = TRUE,
+  labels = c("Short", "Medium", "Long")
+)
+
+housing_clean$lon_zone <- ifelse(housing_clean$LON <= median(housing_clean$LON, na.rm = TRUE),
+                                 "West", "East")
+
+housing_clean$lat_zone <- ifelse(housing_clean$LAT <= median(housing_clean$LAT, na.rm = TRUE),
+                                 "South", "North")
+
+housing_clean$spatial_zone <- factor(paste(housing_clean$lat_zone,
+                                           housing_clean$lon_zone,
+                                           sep = "-"))
+```
+The engineered variables provide a more interpretable way to describe environmental exposure, accessibility, and broad geographic location. These variables are particularly useful in the exploratory phase and may also serve as candidate predictors in regression modeling.
+
+## Relationship Between Features and the House Value
+
+We now examine whether the selected categorical predictors are associated with median home value. The following boxplots provide a descriptive comparison of `MEDV` across the Charles River indicator, pollution level, accessibility category, and broad spatial zone.
+
+```{r}
+library(dplyr)
+library(gridExtra)
+
+library(gridExtra)
+
+p1 <- ggplot(housing_clean, aes(x = CHAS, y = MEDV, fill = CHAS)) +
+  geom_boxplot(alpha = 0.75) +
+  labs(title = "MEDV by Charles River Indicator", x = "Bounds Charles River", y = "MEDV") +
+  scale_fill_manual(values = c("#8bb8e8", "#1f5aa6")) +
+  my.theme()
+
+p2 <- ggplot(housing_clean, aes(x = NOX_cat, y = MEDV, fill = NOX_cat)) +
+  geom_boxplot(alpha = 0.75) +
+  labs(title = "MEDV by NOX Category", x = "NOX Category", y = "MEDV") +
+  scale_fill_brewer(palette = "Blues") +
+  my.theme()
+
+p3 <- ggplot(housing_clean, aes(x = DIS_cat, y = MEDV, fill = DIS_cat)) +
+  geom_boxplot(alpha = 0.75) +
+  labs(title = "MEDV by Distance Category", x = "DIS Category", y = "MEDV") +
+  scale_fill_brewer(palette = "Blues") +
+  my.theme()
+
+p4 <- ggplot(housing_clean, aes(x = spatial_zone, y = MEDV, fill = spatial_zone)) +
+  geom_boxplot(alpha = 0.75) +
+  labs(title = "MEDV by Spatial Zone", x = "Spatial Zone", y = "MEDV") +
+  scale_fill_brewer(palette = "Blues") +
+  my.theme()
+
+grid.arrange(p1, p2, p3, p4, ncol = 2)
+```
+The boxplots suggest that median housing value varies across Charles River adjacency, pollution level, accessibility category, and broad spatial grouping. In particular, tracts bordering the Charles River appear to have somewhat higher housing values, while areas with higher pollution levels tend to have lower values. The patterns across the engineered accessibility and spatial grouping variables further support the presence of neighborhood heterogeneity in housing value.
+
+# Factors Influencing House Prices - Regression Analysis
+
+This section is dedicated to regression analysis of housing value. The main response variable is `MEDV`.
+
+## Candidate Models
+
+The following two base models are used to search the potential optimal candidate model:
+
+1. **Small model** contains only `CHAS`:
+
+$$
+\text{MEDV} = \alpha_0 + \alpha_1 \times \text{CHAS}
+$$
+```{r}
+# Re-read the dataset fresh
+housing_clean <- read.csv("BostonHousing.csv")
+
+# Remove exported index column if it exists
+if ("Unnamed: 0" %in% names(housing_clean)) {
+  housing_clean <- housing_clean[, !(names(housing_clean) %in% "Unnamed: 0")]
+}
+
+# Recode CHAS safely
+housing_clean$CHAS <- as.character(housing_clean$CHAS)
+housing_clean$CHAS <- trimws(housing_clean$CHAS)
+
+# Convert to binary labels
+housing_clean$CHAS[housing_clean$CHAS == "0"] <- "No"
+housing_clean$CHAS[housing_clean$CHAS == "1"] <- "Yes"
+
+# Keep only valid rows
+housing_clean <- housing_clean[housing_clean$CHAS %in% c("No", "Yes"), ]
+
+# Convert to factor
+housing_clean$CHAS <- factor(housing_clean$CHAS, levels = c("No", "Yes"))
+
+# Check
+table(housing_clean$CHAS, useNA = "ifany")
+
+# Small model
+model_small <- lm(MEDV ~ CHAS, data = housing_clean)
+
+kable(round(summary(model_small)$coef, 3),
+      caption = "Small model coefficients")
+```
+
+2. **full model** contains all predictor variables
+
+$$
+\text{MEDV} = \beta_0 + \beta_1 \times \text{CRIM} + \beta_2\times\text{ZN} + \beta_3\times \text{INDUS}++ \cdots +\beta_15\times \text{LAT}
+$$
+
+```{r}
+library(knitr)
+
+model_full <- lm(
+  MEDV ~ CRIM + ZN + INDUS + CHAS + NOX + RM + AGE + DIS + RAD +
+    TAX + PTRATIO + B + LSTAT + LON + LAT,
+  data = housing_clean
+)
+kable(round(summary(model_full)$coef, 3),
+      caption = "Full model coefficients")
+```
+
+3. **Auto Selected Model**
+
+Several automatic model selection methods, including forward selection, backward elimination, stepwise selection, and best subset selection, can be used to search for a suitable candidate model. In this analysis, we illustrate the forward selection approach.
+
+```{r}
+# (3) Automatic variable selection algorithm
+
+# Forward selection based on the full model scope
+model_forward <- step(
+  lm(MEDV ~ 1, data = housing_clean),
+  scope = formula(model_full),
+  direction = "forward",
+  trace = FALSE
+)
+
+kable(round(summary(model_forward)$coef, 3),
+      caption = "Forward selected model coefficients")
+```
+
+## Residual Dianostic Analysis
+
+The residual-based plots—namely, the residual plot, Q-Q plot, scale-location plot, and leverage plot—are summarized as follows.
+
+```{r}
+
+library(ggplot2)
+library(gridExtra)
+
+# Diagnostic plots for the model_forward model
+
+# Create diagnostic data set
+residual_data <- data.frame(
+  Fitted = fitted(model_forward),
+  Residuals = residuals(model_forward),
+  Standardized = rstandard(model_forward),
+  Studentized = rstudent(model_forward)
+)
+
+# Residuals vs Fitted plot
+p1 <- ggplot(residual_data, aes(x = Fitted, y = Residuals)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  geom_smooth(se = FALSE, method = "loess", color = "blue") +
+  labs(title = "Residuals vs Fitted",
+       x = "Fitted Values",
+       y = "Residuals") +
+  my.theme()
+
+# Q-Q plot
+p2 <- ggplot(residual_data, aes(sample = Residuals)) +
+  stat_qq(alpha = 0.6, color = "steelblue") +
+  stat_qq_line(color = "red") +
+  labs(title = "Normal Q-Q Plot",
+       x = "Theoretical Quantiles",
+       y = "Sample Quantiles") +
+  my.theme()
+
+# Scale-Location plot
+p3 <- ggplot(residual_data, aes(x = Fitted, y = sqrt(abs(Standardized)))) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_smooth(se = FALSE, method = "loess", color = "blue") +
+  labs(title = "Scale-Location Plot",
+       x = "Fitted Values",
+       y = expression(sqrt("|Standardized Residuals|"))) +
+  my.theme()
+
+# Residuals vs Leverage plot
+residual_data$Leverage <- hatvalues(model_forward)
+residual_data$CookSD <- cooks.distance(model_forward)
+
+p4 <- ggplot(residual_data, aes(x = Leverage, y = Studentized)) +
+  geom_point(aes(size = CookSD), alpha = 0.6, color = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Residuals vs Leverage",
+       x = "Leverage",
+       y = "Studentized Residuals") +
+  scale_size_continuous("Cook's Distance") +
+  my.theme()
+
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+```
+The diagnostic plots suggest that the regression assumptions should be examined carefully. In particular, the Q-Q plot indicates some departure from normality, while the residual and scale-location plots can be used to assess possible nonlinearity and heteroscedasticity. Therefore, it is reasonable to investigate whether a Box-Cox transformation of `MEDV` can improve model fit。
+
+## Box-Cox Transformation
+
+We perform a Box-Cox transformation based on the candidate model `model_forward`.
+
+```{r}
+suppressPackageStartupMessages(library(MASS))
+
+# Re-read raw data fresh for Box-Cox step
+boxcox_data <- read.csv("BostonHousing.csv")
+
+# Remove exported index column if it exists
+if ("Unnamed: 0" %in% names(boxcox_data)) {
+  boxcox_data <- boxcox_data[, !(names(boxcox_data) %in% "Unnamed: 0")]
+}
+
+# Keep complete cases for modeling variables
+boxcox_data <- boxcox_data[, c("MEDV", "CRIM", "ZN", "INDUS", "CHAS", "NOX",
+                               "RM", "AGE", "DIS", "RAD", "TAX", "PTRATIO",
+                               "B", "LSTAT", "LON", "LAT")]
+boxcox_data <- na.omit(boxcox_data)
+
+# Rebuild CHAS safely from raw 0/1 coding
+boxcox_data$CHAS <- as.character(boxcox_data$CHAS)
+boxcox_data$CHAS <- trimws(boxcox_data$CHAS)
+boxcox_data$CHAS[boxcox_data$CHAS == "0"] <- "No"
+boxcox_data$CHAS[boxcox_data$CHAS == "1"] <- "Yes"
+boxcox_data <- boxcox_data[boxcox_data$CHAS %in% c("No", "Yes"), ]
+boxcox_data$CHAS <- factor(boxcox_data$CHAS, levels = c("No", "Yes"))
+
+# Check CHAS levels before fitting
+print(table(boxcox_data$CHAS, useNA = "ifany"))
+
+# Refit full model on clean data
+model_forward_clean <- lm(
+  formula(model_forward),
+  data = boxcox_data
+)
+
+# Perform Box-Cox transformation
+boxcox_result <- boxcox(model_forward_clean, lambda = seq(-2, 2, length = 100))
+
+# Find optimal lambda
+lambda_opt <- boxcox_result$x[which.max(boxcox_result$y)]
+cat("Optimal lambda for Box-Cox transformation:", lambda_opt, "\n")
+```
+The Box-Cox result will be used to assess whether transforming MEDV is necessary. If the suggested $\lambda$ differs substantially from 1, we will consider an appropriate transformation of the response variable in the subsequent modeling step.
+
+The Box-Cox curve indicates that $\lambda =0.5$ s a reasonable choice.his indicates that the square root of `MEDV` may be used as the transformed response variable. The updated model is
+$$
+\sqrt{\text{MEDV}} = \beta_0 + \beta_1 \times \text{CRIM} + \beta_2\times\text{ZN} + \beta_3\times \text{INDUS}++ \cdots +\beta_15\times \text{LAT}
+$$
+
+Some of the key goodness-of-fit metrics for the transformed model are summarized as follows.
+
+```{r}
+housing_clean$CHAS <- droplevels(housing_clean$CHAS)
+
+if ("NOX_cat" %in% names(housing_clean)) {
+  housing_clean$NOX_cat <- droplevels(housing_clean$NOX_cat)
+}
+
+if ("DIS_cat" %in% names(housing_clean)) {
+  housing_clean$DIS_cat <- droplevels(housing_clean$DIS_cat)
+}
+
+if ("spatial_zone" %in% names(housing_clean)) {
+  housing_clean$spatial_zone <- droplevels(housing_clean$spatial_zone)
+}
+```
+
+The above $R^2$indicates only a limited improvement.
+
+**Caution:** Because AIC is calculated from the log-likelihood, and the log-likelihood depends on the scale of the response variable, the AIC values from the original model and the transformed model are **not directly comparable**.
+
+```{r}
+# Create transformed response variable
+if(lambda_opt != 0) {
+  housing_clean$MEDV_trans <- (housing_clean$MEDV^lambda_opt - 1) / lambda_opt
+} else {
+  housing_clean$MEDV_trans <- log(housing_clean$MEDV)
+}
+
+# Fit model with transformed response
+model_transformed <- lm(
+  MEDV_trans ~ CRIM + ZN + INDUS + CHAS + NOX + RM + AGE + DIS + RAD +
+    TAX + PTRATIO + B + LSTAT + LON + LAT,
+  data = housing_clean
+)
+
+# Compare original and transformed models
+cat("\n=== Model Comparison ===\n\n",
+    "Original model R-squared:", summary(model_forward)$r.squared, "\n\n",
+    "Transformed model R-squared:", summary(model_transformed)$r.squared, "\n\n",
+    "Original model AIC:", AIC(model_forward), "\n\n",
+    "Transformed model AIC:", AIC(model_transformed), "\n")
+```
+
+The diagnostic plots for the transformed model still suggest some departure from the normality assumption. Since the transformed model also reduces the direct interpretability of the response variable, we retain the original candidate model for reporting and interpretation. Although the residuals are not perfectly normal, the Boston housing dataset has a reasonably large sample size, so the reported coefficient tests are still expected to be approximately valid under large-sample theory.
+
+# Summary of Optimal Model
+
+A multiple linear regression model was estimated to explain median house value (MEDV) using structural, environmental, accessibility, and spatial predictors from the Boston housing dataset. The final candidate model, obtained through the forward selection procedure, identifies a subset of variables that are useful for explaining variation in Boston housing values. Overall, the model suggests that housing value is associated with a combination of neighborhood quality, housing characteristics, environmental conditions, and location.
+
+**Key Predictors**:
+
+
+* **Average Rooms (`RM`)**: Houses with more rooms tend to have higher median values, indicating that housing size is positively associated with property value.
+* **Lower Status Population (`LSTAT`)**: Higher values of LSTAT are associated with lower median house values, suggesting an important socioeconomic gradient in the Boston housing market.
+* **Nitric Oxides Concentration (`NOX`)**: Higher air pollution levels tend to be associated with lower housing values, showing that environmental quality is an important determinant of property value.
+* **Distance to Employment Centers (`DIS`)**: Housing values vary with accessibility to employment centers, suggesting that neighborhood convenience and connectivity are related to home value.
+* **Charles River Indicator (`CHAS`)**: Tracts bordering the Charles River may differ in median house value from those that do not, indicating that river adjacency captures a meaningful location-related characteristic.
+* **Spatial and Accessibility Variables**: Variables such as RAD, LON, and LAT help explain broad geographic variation in housing value across the Boston area.
+
+Overall, the model suggests that housing prices in the Boston area are shaped by a combination of structural, socioeconomic, environmental, and spatial factors. Although the model does not explain all of the variability in MEDV, it provides a meaningful summary of the main predictors associated with median housing value.
+
+
+
+
+
+
